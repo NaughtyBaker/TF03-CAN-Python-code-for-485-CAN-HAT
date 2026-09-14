@@ -78,8 +78,12 @@ TF03 unpowered. A bitrate mismatch instead raises error frames.
     systemctl status tf03-can.service
 
 If `command -v ip` is not `/sbin/ip` on your image, edit `ExecStart` accordingly.
-For a one-off session you can instead run:
+The unit is idempotent: it runs `ip link set can0 down` then `ip link set can0 up
+type can bitrate 1000000`, so it also succeeds when `can0` is already up (setting
+bitrate on a running CAN interface returns `RTNETLINK answers: Device or resource
+busy`). For a one-off session you can instead run:
 
+    sudo ip link set can0 down
     sudo ip link set can0 up type can bitrate 1000000
 
 ## 5. Run

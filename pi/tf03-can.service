@@ -1,9 +1,11 @@
 [Unit]
 Description=Bring up CAN interface can0 at 1 Mbit/s (TF03-CAN / MCP2515)
+After=sys-subsystem-net-devices-can0.device
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+ExecStart=/sbin/ip link set can0 down
 ExecStart=/sbin/ip link set can0 up type can bitrate 1000000
 
 [Install]
