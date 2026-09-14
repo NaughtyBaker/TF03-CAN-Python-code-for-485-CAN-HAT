@@ -90,7 +90,7 @@ busy`). For a one-off session you can instead run:
 
 Copy to the Pi, then:
 
-    scp pi/TF03-CAN-pi.py user@rpizero2w.local:/home/user/tf03/
+    scp pi/TF03-CAN-pi.py pi/tf03_cmd.py user@rpizero2w.local:/home/user/tf03/
     sudo python3 ~/tf03/TF03-CAN-pi.py
 
 Options:
@@ -109,6 +109,43 @@ Example output:
 The reader filters `arbitration_id == 0x3`, requires `dlc >= 4`, and decodes
 distance and strength as little-endian uint16 (cm and raw counts). It keeps the
 bus up on timeout and shuts the bus down cleanly on Ctrl+C.
+
+## 6. Sending commands
+
+`tf03_cmd.py` sends a command frame to the TF03 (default CAN ID `0x3`) and prints
+the response.
+
+    sudo python3 ~/tf03/tf03_cmd.py version
+    [cmd] version id=0x01 len=4 frame=5A 04 01 5F
+    [RX] frame=5A 07 01 50 01 02 B5 -> firmware version 2.1.80
+
+Raw frames (any command, hex string):
+
+    sudo python3 ~/tf03/tf03_cmd.py raw "5A 04 01 5F"
+
+Named commands cover the manual: `version`, `reset`, `trigger-mode`, `output-on`,
+`output-off`, `single`, `save`, `restore`, `term-on`, `term-off`, `frame-std`,
+`frame-ext`, `dronecan-on`, `dronecan-off`, `switch-ttl`, `switch-can`,
+`lowpower-on`, `lowpower-off`, `modbus-enable`, and parameterized
+`frame-rate`, `baud`, `can-tx-id`, `can-rx-id`, `can-baud`, `out-of-range`,
+`offset`, `modbus-addr`. Frames are built as `5A | Len | ID | payload | checksum`
+with checksum = low 8 bits of the sum of the first `Len-1` bytes.
+
+Options: `--channel can0`, `--can-id 0x3`, `--extended`, `--timeout 1.0`,
+`--yes`, `--dry-run`.
+
+Response framing: the TF03 sends command replies as **6-byte CAN frames** (its
+fixed payload width), zero-padded, and splits replies longer than 6 bytes across
+consecutive frames. Example: the 7-byte firmware reply arrives as
+`5A 07 01 50 01 02` then `B5 00 00 00 00 00`; the tool reassembles and checks the
+checksum.
+
+Safety: state-changing commands are **not sent unless `--yes` is given** (the
+frame is printed and skipped otherwise); `version` sends without `--yes`;
+`--dry-run` always suppresses sending. Some commands do not reply on every
+firmware revision (`term-off` is one) and return `[RX] no response`; that is a
+firmware behavior, not a tool error. Most parameter changes only persist after
+`save` and a power cycle.
 
 ## Deviations from the vendor tutorial
 
